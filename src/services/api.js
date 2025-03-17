@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Defina a URL do seu backend
-const API_BASE_URL = 'http://192.168.1.7:8000/api';
+const API_BASE_URL = 'https://backend-skillmarket.onrender.com/api';
 
 const api = axios.create({
     baseURL: API_BASE_URL,

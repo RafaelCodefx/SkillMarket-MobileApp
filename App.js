@@ -36,6 +36,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Pressable } from 'react-native';
 
+
+
+
 // Dados simulados
 const DATA = [
   {
@@ -382,7 +385,7 @@ function Delivery() {
       const token = await AsyncStorage.getItem("token"); // 📌 Obtendo o token do usuário autenticado
       const telefone = await AsyncStorage.getItem("telefone"); // 📌 Obtendo telefone salvo do usuário
 
-      const response = await axios.post("http://192.168.1.7:8000/delivery/criar", {
+      const response = await axios.post("https://backend-skillmarket.onrender.com/delivery/criar", {
         descricao: valor,
         tipo,
         telefone,
@@ -781,7 +784,7 @@ const categories = ['Todas', 'Reformas e Reparos', 'Cuidados Estéticos', 'Educa
 
 import { useFocusEffect } from "@react-navigation/native";
 function Explorar() {
-  const BASE_URL = "http://192.168.1.7:8000";
+  const BASE_URL = "https://backend-skillmarket.onrender.com";
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentVideo, setCurrentVideo] = useState(null);
@@ -985,7 +988,6 @@ const Perfil = ({ navigation }) => {
           <View style={styles.profileHeader5}>
               <Image source={require('./assets/usuario.png')} style={styles.iconperfil}/>
               <Text style={styles.userName22}>{nome}</Text>
-              <Text style={styles.userPhone22}>📲+{telefone}</Text>
           </View>
 
           {/* Lista de Pedidos */}
@@ -1072,10 +1074,12 @@ const Profissional = ({ navigation }) => {
         tipoUsuario: 'profissional',
         area
       });
-
+      const { token } = response.data;
       Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
+      console.log('📌 Resposta do backend:', response.data);
       
       // Salvar informações no AsyncStorage
+      await AsyncStorage.setItem('token', token);
       await AsyncStorage.setItem('nome', nome);
       await AsyncStorage.setItem('email', email); // Salvar email para lógica de recuperação
       await AsyncStorage.setItem('telefone', telefone);
@@ -1278,19 +1282,8 @@ function Inicio() {
           <Text style={styles.footerheader}>Bem-vindo, {nome}!</Text>
 
           {/* Campo de Busca */}
-          <View style={styles.searchContainer}>
-              <TextInput
-                  style={styles.searchInput}
-                  placeholder=" 🔍  O Que Precisa? "
-                  value={searchText}
-                  onChangeText={setSearchText}
-              />
-              {searchText.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton}>
-                      <Text style={styles.clearText}>✖</Text>
-                  </TouchableOpacity>
-              )}
-          </View>
+          
+          
 
           <FlatList
               data={pedidos}
@@ -1721,7 +1714,6 @@ const PerfilProfissional = () => {
           <View style={styles.profileHeader5}>
               <Image source={require('./assets/comerciante.png')} style={styles.iconperfil}/>
               <Text style={styles.userName22}>{nome}</Text>
-              <Text style={styles.userPhone22}>📲+{telefone}</Text>
           </View>
           <View style={styles.headerText10}>
             <Text style={styles.loginHeader}>⚠️ Avisos ⚠️</Text>
@@ -1820,14 +1812,25 @@ function AppTabsProfissional() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const pingServer = () => {
+      fetch("https://backend-skillmarket.onrender.com/")
+        .then(() => console.log("Servidor pingado!"))
+        .catch((err) => console.error("Erro ao pingar:", err));
+    };
+
+    const interval = setInterval(pingServer, 300000); // A cada 5 minutos
+
+    return () => clearInterval(interval); // Cleanup quando o app fechar
+  }, []);
+
   return (
-    
     <NavigationContainer>
-      <Stack.Navigator 
-        initialRouteName="Login" 
+      <Stack.Navigator
+        initialRouteName="Login"
         screenOptions={{
-          headerStyle: { backgroundColor: 'white' }, 
-          headerTintColor: 'black', 
+          headerStyle: { backgroundColor: "white" },
+          headerTintColor: "black",
           headerShown: false,
         }}
       >
@@ -1838,18 +1841,15 @@ export default function App() {
         <Stack.Screen name="Explorar" component={Explorar} />
         <Stack.Screen name="FormularioPedidos" component={FormularioPedidos} />
         <Stack.Screen name="AppTabsProfissional" component={AppTabsProfissional} />
-        <Stack.Screen name="Delivery"  component={Delivery} />
+        <Stack.Screen name="Delivery" component={Delivery} />
         <Stack.Screen name="Cliente" component={Cliente} />
         <Stack.Screen name="App" component={AppTabs} />
         <Stack.Screen name="EsqueciSenha" component={EsqueciSenha} />
         <Stack.Screen name="RedefinirSenha" component={RedefinirSenha} />
-        
         <Stack.Screen name="Prepararpedido" component={Prepararpedido} />
-        
       </Stack.Navigator>
       <StatusBar backgroundColor="#f9f9f9" barStyle="dark-content" />
     </NavigationContainer>
-    
   );
 }
 
@@ -2665,7 +2665,6 @@ saveButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-    textTransform: 'uppercase',
     fontFamily: 'roboto'
   },
     buttonText2: {
@@ -2724,11 +2723,7 @@ saveButtonText: {
     shadowRadius: 4,
     elevation: 5,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+
   
   searchContainer: {
     flexDirection: 'row',
@@ -3169,9 +3164,5 @@ saveButtonText: {
     alignItems: 'center',
     marginVertical: 8,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+
 });

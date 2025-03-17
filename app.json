@@ -1,25 +1,27 @@
 {
   "expo": {
-    "name": "Skill_Market",
+    "name": "Skill Market",
     "slug": "Skill_Market",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/Logo_.png",
+    "icon": "./assets/Icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/Logo_.png",
+      "image": "./assets/Icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.skillmarket"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/Icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.SkillMarket"
     },
     "web": {
       "favicon": "./assets/Icon_/home/espectro/Downloads/Icon.png"
@@ -28,6 +30,12 @@
       "expo-font",
       "expo-video",
       "expo-asset"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "447d051c-2d88-4310-8333-f95a5fbfb4b9"
+      }
+    },
+    "owner": "rafael-code"
   }
 }

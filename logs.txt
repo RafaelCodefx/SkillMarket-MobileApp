@@ -1,0 +1,3 @@
+The following error occurred:
+  Missing required flag output
+See more help with --help
