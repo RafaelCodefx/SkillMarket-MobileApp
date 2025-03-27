@@ -477,7 +477,7 @@ function Prepararpedido({ route, navigation }) {
       <Image source={require('./assets/shopping-bag.png')} style={styles.imagePedir} />
       </View>
       <View  style={styles.container}>
-      <Text style={styles.footerheaderPedidos}>Prepare-se para pedir!</Text>
+      <Text style={styles.footerheaderPedidos}>repare-se para pedir!</Text>
       <Text style={styles.descriptionItem2}>Mas Antes, Aqui vai algumas Dicas:</Text>
       
       </View>
@@ -1314,13 +1314,15 @@ function Inicio() {
 function Login({ navigation }) {
   const [telefone, setTelefone] = useState('');
   const [senha, setSenha] = useState('');
+  const [loading, setLoading] = useState('')
 
   const handleLogin = async () => {
     if (!telefone || !senha) {
         alert('Preencha todos os campos');
         return;
     }
-
+    if (loading) return; // Evita múltiplos cliques
+    setLoading(true);
     try {
         const response = await api.post('/auth/login', {
             telefone,

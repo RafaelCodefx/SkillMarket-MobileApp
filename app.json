@@ -23,6 +23,10 @@
       },
       "package": "com.SkillMarket"
     },
+    "permissions": [
+      "ACCESS_FINE_LOCATION",
+      "ACCESS_COARSE_LOCATION"
+    ],
     "web": {
       "favicon": "./assets/Icon_/home/espectro/Downloads/Icon.png"
     },
@@ -36,6 +40,12 @@
         "projectId": "447d051c-2d88-4310-8333-f95a5fbfb4b9"
       }
     },
-    "owner": "rafael-code"
+    "owner": "rafael-code",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/447d051c-2d88-4310-8333-f95a5fbfb4b9"
+    }
   }
 }
