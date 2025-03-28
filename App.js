@@ -477,7 +477,7 @@ function Prepararpedido({ route, navigation }) {
       <Image source={require('./assets/shopping-bag.png')} style={styles.imagePedir} />
       </View>
       <View  style={styles.container}>
-      <Text style={styles.footerheaderPedidos}>repare-se para pedir!</Text>
+      <Text style={styles.footerheaderPedidos}>Prepare-se para pedir!</Text>
       <Text style={styles.descriptionItem2}>Mas Antes, Aqui vai algumas Dicas:</Text>
       
       </View>
