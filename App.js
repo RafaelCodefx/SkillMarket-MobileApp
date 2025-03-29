@@ -634,9 +634,10 @@ function FormularioPedidos() {
 >
   {/* Tile do OpenStreetMap */}
   <UrlTile
-    urlTemplate="http://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
-    maximumZ={19}
-  />
+  urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+  maximumZ={19}
+/>
+
   
   {/* Marcador da posição atual */}
   {location && (
