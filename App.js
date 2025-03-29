@@ -521,7 +521,7 @@ function Prepararpedido({ route, navigation }) {
   );
 }
 
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, UrlTile } from 'react-native-maps';
 
 function FormularioPedidos() {
   const [location, setLocation] = useState(null);
@@ -618,24 +618,32 @@ function FormularioPedidos() {
           <ActivityIndicator size="large" color="#0000ff" />
         ) : (
           <MapView
-          style={{ flex:1, maxHeight:240, height:240}}
-            region={location ? {
-              latitude: location.latitude,
-              longitude: location.longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            } : {
-              latitude: -23.5505, // Localização padrão (São Paulo)
-              longitude: -46.6333,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-            onPress={(e) => setLocation(e.nativeEvent.coordinate)}
-          >
-            {location && (
-              <Marker coordinate={location} title="Local do Pedido" />
-            )}
-          </MapView>
+  style={{ flex: 1, maxHeight: 240, height: 240 }}
+  region={location ? {
+    latitude: location.latitude,
+    longitude: location.longitude,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  } : {
+    latitude: -23.5505,
+    longitude: -46.6333,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  }}
+  onPress={(e) => setLocation(e.nativeEvent.coordinate)}
+>
+  {/* Tile do OpenStreetMap */}
+  <UrlTile
+    urlTemplate="http://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    maximumZ={19}
+  />
+  
+  {/* Marcador da posição atual */}
+  {location && (
+    <Marker coordinate={location} title="Local do Pedido" />
+  )}
+</MapView>
+
 
         )}
 
@@ -1310,79 +1318,91 @@ function Inicio() {
       </SafeAreaView>
   );
 }
-
 function Login({ navigation }) {
   const [telefone, setTelefone] = useState('');
   const [senha, setSenha] = useState('');
-  const [loading, setLoading] = useState('')
+  const [loading, setLoading] = useState(false); // CORRIGIDO: booleano
 
   const handleLogin = async () => {
     if (!telefone || !senha) {
-        alert('Preencha todos os campos');
-        return;
+      Alert.alert('Erro', 'Preencha todos os campos');
+      return;
     }
-    if (loading) return; // Evita múltiplos cliques
+
+    if (loading) return; // evita múltiplos cliques
+
     setLoading(true);
+
     try {
-        const response = await api.post('/auth/login', {
-            telefone,
-            senha
-        });
+      const response = await api.post('/auth/login', {
+        telefone,
+        senha,
+      });
 
-        // Salvar token no AsyncStorage
-        const token = response.data.token; // Pegando o token corretamente
-        await AsyncStorage.setItem('token', token);
-        console.log('Token do usuário: ' + token); // Agora mostrará o token corretamente
+      const token = response.data.token;
+      await AsyncStorage.setItem('token', token);
+      await AsyncStorage.setItem('userId', String(response.data.userId));
+      await AsyncStorage.setItem('nome', response.data.nome);
+      await AsyncStorage.setItem('tipoUsuario', response.data.tipoUsuario);
 
-        await AsyncStorage.setItem('userId', String(response.data.userId)); // Convertendo para string por garantia
-        await AsyncStorage.setItem('nome', response.data.nome);
-        await AsyncStorage.setItem('tipoUsuario', response.data.tipoUsuario);
+      Alert.alert('Sucesso', 'Login realizado com sucesso!');
 
-        alert('Login realizado com sucesso!');
-        
-        // Redirecionar o usuário conforme seu tipo
-        if (response.data.tipoUsuario === 'profissional') {
-            navigation.navigate('AppTabsProfissional');
-        } else {
-            navigation.navigate('App');
-        }
-
+      if (response.data.tipoUsuario === 'profissional') {
+        navigation.navigate('AppTabsProfissional');
+      } else {
+        navigation.navigate('App');
+      }
     } catch (error) {
-        console.error('Erro no login:', error.response?.data || error.message);
-        alert(error.response?.data?.message || 'Erro ao fazer login. Tente novamente.');
+      console.error('Erro no login:', error.response?.data || error.message);
+      Alert.alert(
+        'Erro',
+        error.response?.data?.message || 'Erro ao fazer login. Tente novamente.'
+      );
+    } finally {
+      setLoading(false); // garante que loading seja desativado
     }
-};
+  };
 
   return (
     <SafeAreaView style={[styles.container, styles.centered]}>
       <View style={styles.loginContainer}>
         <Image source={require('./assets/Logo_.png')} style={styles.categoryIconLogin} />
         <Text style={styles.loginHeader}>Faça Login!</Text>
+
         <TextInput
           style={styles.input}
           placeholder="Número de telefone"
           keyboardType="phone-pad"
           value={telefone}
-          onChangeText={(text) => setTelefone(text)}
+          onChangeText={setTelefone}
         />
+
         <TextInput
           style={styles.input}
           placeholder="Senha"
           secureTextEntry
           value={senha}
-          onChangeText={(text) => setSenha(text)}
+          onChangeText={setSenha}
         />
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Entrar!</Text>
+
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={handleLogin}
+          disabled={loading} // desativa o botão durante o carregamento
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Entrar!</Text>
+          )}
         </TouchableOpacity>
 
-      
-        <TouchableOpacity onPress={() => navigation.navigate("EsqueciSenha")}>
-        <Text style={styles.footer}>Esqueci minha senha</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('EsqueciSenha')}>
+          <Text style={styles.footer}>Esqueci minha senha</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity  onPress={() => navigation.navigate('Boas-vindas')}>
-        <Text style={styles.footer}>Não tenho Conta!</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Boas-vindas')}>
+          <Text style={styles.footer}>Não tenho Conta!</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
