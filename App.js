@@ -613,42 +613,7 @@ function FormularioPedidos() {
       />
 
       {/* Mapa e Localização */}
-      <View style={{ height: 240, marginVertical: 10 }}>
-        {loadingLocation ? (
-          <ActivityIndicator size="large" color="#0000ff" />
-        ) : (
-          <MapView
-  style={{ flex: 1, maxHeight: 240, height: 240 }}
-  region={location ? {
-    latitude: location.latitude,
-    longitude: location.longitude,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  } : {
-    latitude: -23.5505,
-    longitude: -46.6333,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  }}
-  onPress={(e) => setLocation(e.nativeEvent.coordinate)}
->
-  {/* Tile do OpenStreetMap */}
-  <UrlTile
-  urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-  maximumZ={19}
-/>
 
-  
-  {/* Marcador da posição atual */}
-  {location && (
-    <Marker coordinate={location} title="Local do Pedido" />
-  )}
-</MapView>
-
-
-        )}
-
-      </View>
                     {/* Seleção de Categoria */}
                     <View style={styles.pickerContainer4}>
       <Picker
