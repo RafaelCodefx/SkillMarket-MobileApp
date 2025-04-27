@@ -5,7 +5,8 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Video } from "expo-av";
+import {VideoView, VideoPlayer, VideoThumbnail,} from 'expo-video';
+import { Video } from 'expo-av';
 import api from './src/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -79,27 +80,33 @@ function Home() {
   useEffect(() => {
     const fetchNome = async () => {
       try {
-          const token = await AsyncStorage.getItem('token'); // Recupera o token salvo após login
-          if (!token) {
-              console.error('Token não encontrado.');
-              return;
-          }
+        const storedNome = await AsyncStorage.getItem('nome');
+        if (storedNome) {
+          setNome(storedNome); // Mostra imediatamente o nome salvo
+        }
   
-          const response = await api.get('/auth/me', {
-              headers: { Authorization: `Bearer ${token}` } // Passa o token no cabeçalho
-          });
+        const token = await AsyncStorage.getItem('token');
+        if (!token) {
+          console.error('Token não encontrado.');
+          return;
+        }
   
-          if (response.data && response.data.nome) {
-              setNome(response.data.nome);
-          }
+        const response = await api.get('/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+  
+        if (response.data && response.data.nome) {
+          setNome(response.data.nome);
+          await AsyncStorage.setItem('nome', response.data.nome); // atualiza o nome salvo
+        }
       } catch (error) {
-          console.error('Erro ao buscar nome do usuário:', error.response?.data || error.message);
+        console.error('Erro ao buscar nome do usuário:', error.response?.data || error.message);
       }
-  };
+    };
   
-
     fetchNome();
   }, []);
+  
 
   const categories = [
     {
@@ -241,7 +248,7 @@ function Home() {
   }, [searchText, allServices]);
 
   return (
-    <ScrollView>
+    <ScrollView style={styles.cordoscrow}>
       <View style={styles.container}>
         <Text style={styles.footerheader}>Olá, {nome}</Text>
 
@@ -289,10 +296,14 @@ function Home() {
             <Text style={styles.sectionTitle}>Categorias</Text>
             <View style={styles.categoriesContainer}>
               {categories.map((category) => (
-                <View key={category.id} style={styles.category}>
-                  <Image source={category.icon} style={styles.categoryIcon} />
-                  <Text style={styles.categoryText}>{category.name}</Text>
+                  <View key={category.id} style={styles.category}>
+                  <TouchableOpacity onPress={() => navigation.navigate('PedidoPorCategoria', { category: category })}> 
+                    <Image source={category.icon} style={styles.categoryIcon} />
+                    <Text style={styles.categoryText}>{category.name}</Text>
+                  </TouchableOpacity>
                 </View>
+                
+                
               ))}
             </View>
 {/*
@@ -308,7 +319,7 @@ function Home() {
 
             */}
 
-            {/* Subcategorias */}
+            {/* Subcategorias */}{/*
             <View style={styles.container2}>
               <FlatList
                 data={categories}
@@ -332,15 +343,98 @@ function Home() {
                       )}
                     />
                   </View>
+
+                 
                 )}
               />
             </View>
+             */}
+             <View>
+              <Text> </Text>
+              <Text> </Text>
+              
+             </View>
+        <Pressable style={styles.botaoPedidoRapido} onPress={() => navigation.navigate('FormularioPedidos')}>
+          <View>
+            <Text style={styles.textoPedidoRapido}>Fazer Pedido Rápido!</Text>
+          </View>
+        </Pressable>
           </>
         )}
       </View>
     </ScrollView>
   );
 }
+
+
+
+function PedidoPorCategoria({ navigation, route }) {
+
+  const { category } = route.params;
+  const [searchText, setSearchText] = useState('');
+  const [filteredServices, setFilteredServices] = useState(category.services);
+
+  useEffect(() => {
+    if (searchText.trim() === '') {
+      setFilteredServices(category.services);
+    } else {
+      const filtered = category.services.filter(service =>
+        service.name.toLowerCase().includes(searchText.toLowerCase())
+      );
+      setFilteredServices(filtered);
+    }
+  }, [searchText]);
+
+
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container40}>
+        {/* Botão de voltar */}
+        <TouchableOpacity style={styles.backButton40} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={28} color="#333" />
+        </TouchableOpacity>
+
+        {/* Título da Categoria */}
+        <Text style={styles.categoryTitle40}>{category.name}</Text>
+
+        {/* Campo de busca */}
+        <View style={styles.searchContainer40}>
+          <TextInput
+            style={styles.searchInput40}
+            placeholder="🔍 Pesquisar serviço..."
+            value={searchText}
+            onChangeText={setSearchText}
+          />
+          {searchText.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton40}>
+              <Text style={styles.clearText40}>✖</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Lista de serviços em colunas */}
+        <FlatList
+          data={filteredServices}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          contentContainerStyle={styles.listContainer40}
+          columnWrapperStyle={{ justifyContent: 'space-between' }}
+          renderItem={({ item: service }) => (
+            <TouchableOpacity
+              style={styles.serviceCard40}
+              onPress={() => navigation.navigate('Prepararpedido', { service })}
+            >
+              <Image source={service.image} style={styles.serviceIcon40} />
+              <Text style={styles.serviceLabel40}>{service.name}</Text>
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={<Text style={styles.noResults40}>Nenhum serviço encontrado.</Text>}
+        />
+      </View>
+    </TouchableWithoutFeedback>
+  );
+}
+
 
 import RNPickerSelect from "react-native-picker-select";
 
@@ -559,24 +653,34 @@ function FormularioPedidos() {
       Alert.alert("Erro", "Por favor, preencha todos os campos obrigatórios.");
       return;
     }
-
+  
     if (!location) {
       Alert.alert("Erro", "Não foi possível obter sua localização.");
       return;
     }
-
+  
     try {
       const token = await AsyncStorage.getItem('token');
+      const userId = await AsyncStorage.getItem('userId'); // <<< PEGA O USERID AQUI
+  
+      if (!userId) {
+        Alert.alert("Erro", "Usuário não identificado. Faça login novamente.");
+        return;
+      }
+  
       const { latitude, longitude } = location;
-
+  
       await api.post('/pedidos/criar', {
         descricao,
         latitude,
         longitude,
         telefone,
-        area
-      }, { headers: { Authorization: `Bearer ${token}` } });
-
+        area,
+        userId, // <<< MANDA O USERID NO BODY TAMBÉM
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+  
       Alert.alert('Sucesso', 'Pedido enviado com sucesso!');
       navigation.navigate('App');
     } catch (error) {
@@ -584,6 +688,8 @@ function FormularioPedidos() {
       Alert.alert("Erro", "Não foi possível enviar o pedido.");
     }
   };
+  
+  
 
   return (
     <ScrollView contentContainerStyle={styles.containerGrow}>
@@ -757,7 +863,9 @@ const { width, height } = Dimensions.get('window');
 const categories = ['Todas', 'Reformas e Reparos', 'Cuidados Estéticos', 'Educação', 'Saúde'];
 
 import { useFocusEffect } from "@react-navigation/native";
-function Explorar() {
+
+
+/* function Explorar() {
   const BASE_URL = "https://backend-skillmarket.onrender.com";
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -862,25 +970,28 @@ function Explorar() {
         ) : (
           <TouchableOpacity onPress={() => togglePlayPause(index)} activeOpacity={1}>
             <Video
-              ref={videoRefs.current[index]}
-              source={{ uri: item.video.startsWith("http") ? item.video : `${BASE_URL}/${item.video}` }}
-              style={styles.video34}
-              shouldPlay={isPlaying}
-              isLooping
-              resizeMode="cover"
-            />
+  source={{ uri: `${BASE_URL}/videos/${item.video}` }} // ✅ só o nome do arquivo no banco
+  style={{ width: '100%', height: 300 }}
+  useNativeControls
+  resizeMode="contain"
+  shouldPlay={false}
+/>
+
           </TouchableOpacity>
         )}
 
-        {/* Gradiente de fundo */}
+        {/* Gradiente de fundo */ /*} */
+               /*
         <LinearGradient colors={["rgba(0,0,0,0.5)", "transparent"]} style={styles.overlay} />
 
-        {/* Informações do Criador */}
+        {/* Informações do Criador */ /*}*/
+        /*
         <View style={styles.infoContainer34}>
           <Text style={styles.username34}>@{item.usuario?.nome || "Usuário Desconhecido"}</Text>
         </View>
 
-        {/* Botão de Contato no WhatsApp */}
+        {/* Botão de Contato no WhatsApp */ /*} */
+        /*
         <View style={styles.actionsContainer34}>
           <TouchableOpacity style={styles.actionButton34} onPress={() => abrirWhatsAppComNumero(item.usuario?.telefone)}>
             <Ionicons name="logo-whatsapp" size={34} color="white" />
@@ -913,78 +1024,220 @@ function Explorar() {
     </View>
   );
 }
+*/
 
 const Perfil = ({ navigation }) => {
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
-  const [loading, setLoading] = useState(null)
-  const [pedidos, setPedidos] = useState('')
+  const [loading, setLoading] = useState(true);
+  const [pedidos, setPedidos] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedArea, setSelectedArea] = useState('Serviços gerais');
+
+
 
   useEffect(() => {
-      const fetchUserData = async () => {
-          try {
-              const storedNome = await AsyncStorage.getItem('nome');
-              const storedTelefone = await AsyncStorage.getItem('telefone');
-              console.log('Telefone armazenado: ', storedTelefone)
-              const token = await AsyncStorage.getItem('token');
+    const fetchUserData = async () => {
+      try {
+        const storedNome = await AsyncStorage.getItem('nome');
+        const storedTelefone = await AsyncStorage.getItem('telefone');
+        const token = await AsyncStorage.getItem('token');
+        await console.log('token: ',token)
 
-              if (storedNome) setNome(storedNome);
-              if (storedTelefone) setTelefone(storedTelefone);
+        if (storedNome) setNome(storedNome);
+        if (storedTelefone) setTelefone(storedTelefone);
 
-              // Buscar pedidos do usuário
-              const response = await api.get('/pedidos/listar', {
-                  headers: { Authorization: `Bearer ${token}` }
-              });
-              setPedidos(response.data);
-          } catch (error) {
-              console.error('Erro ao carregar dados:', error);
-          } finally {
-              setLoading(false);
-          }
-      };
+        const response = await api.get('/pedidos/listar', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-      fetchUserData();
+        setPedidos(response.data);
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
   }, []);
 
+  const confirmarTrocaTipo = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await api.put('/auth/trocar-tipo', { area: selectedArea }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+  
+      if (response.status === 200) {
+        const novoTipo = response.data.tipoUsuario;
+        await AsyncStorage.setItem('tipoUsuario', novoTipo);
+        Alert.alert("🚀 Tipo de usuário alterado!", `Agora você é um ${novoTipo} no Skill Market!`);
+        setModalVisible(false);
+  
+        if (novoTipo === 'cliente') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'App' }],
+          });
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'AppTabsProfissional' }],
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao trocar tipo de usuário:', err);
+      Alert.alert('Erro', 'Não foi possível alterar o tipo de usuário.');
+    }
+  };  
 
-
-
-
-  // 📌 Logout
+  const trocarTipoUsuario = async () => {
+    const tipoAtual = await AsyncStorage.getItem('tipoUsuario');
+  
+    if (tipoAtual === 'cliente') {
+      setModalVisible(true);
+    } else {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const response = await api.put('/auth/trocar-tipo', {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+  
+        if (response.status === 200) {
+          const novoTipo = response.data.tipoUsuario;
+          await AsyncStorage.setItem('tipoUsuario', novoTipo);
+          Alert.alert("🚀 Tipo de usuário alterado!", `Agora você é um ${novoTipo} no Skill Market!`);
+          setModalVisible(false);
+  
+          if (novoTipo === 'cliente') {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'App' }],
+            });
+          } else {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'AppTabsProfissional' }],
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao trocar tipo de usuário:', err);
+        Alert.alert('Erro', 'Não foi possível alterar o tipo de usuário.');
+      }
+    }
+  };
+  
+  const confirmarExclusao = (pedidoId) => {
+    Alert.alert(
+      'Confirmar Exclusão',
+      'Você tem certeza que deseja deletar este pedido?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sim',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('token');
+              await api.delete(`/pedidos/excluir/${pedidoId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+  
+              // Remove o pedido da lista sem precisar recarregar a tela inteira
+              setPedidos((prev) => prev.filter(p => p._id !== pedidoId));
+            } catch (error) {
+              console.error('Erro ao excluir pedido:', error);
+              Alert.alert('Erro', 'Não foi possível excluir o pedido.');
+            }
+          }
+        }
+      ]
+    );
+  };
+  
   const handleLogout = async () => {
-      await AsyncStorage.clear();
-      navigation.navigate('Login'); // Volta para a tela de login
+    await AsyncStorage.clear();
+    navigation.navigate('Login');
   };
 
   return (
-      <SafeAreaView style={styles.container}>
-          {/* Header com imagem de perfil */}
-          <View style={styles.profileHeader5}>
-              <Image source={require('./assets/usuario.png')} style={styles.iconperfil}/>
-              <Text style={styles.userName22}>{nome}</Text>
-          </View>
+    <SafeAreaView style={styles.containerPedido2}>
+      {/* Header do perfil */}
+      <View style={styles.profileHeader5}>
+        <Image source={require('./assets/usuario.png')} style={styles.iconperfil} />
+        <Text style={styles.userName22}>{nome}</Text>
+      </View>
 
-          {/* Lista de Pedidos */}
-          <ScrollView contentContainerStyle={styles.ordersContainer}>
-              <Text style={styles.sectionTitle}>Histórico de Pedidos</Text>
-              {loading ? (
-                  <ActivityIndicator size="large" color="#6c63ff" />
-              ) : pedidos.length === 0 ? (
-                  <Text style={styles.noData}>Nenhum pedido encontrado</Text>
-              ) : (
-                  pedidos.map((pedido) => (
-                      <View key={pedido._id} style={styles.pedidoContainer}>
-                          <Text style={styles.pedidoText}>{pedido.descricao}</Text>
-                      </View>
-                  ))
-              )}
-          </ScrollView>
+      {/* Histórico de Pedidos */}
+      <ScrollView contentContainerStyle={styles.ordersContainer}>
+        <Text style={styles.sectionTitle}>Histórico de Pedidos</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#6c63ff" />
+        ) : pedidos.length === 0 ? (
+          <Text style={styles.noData}>Nenhum pedido encontrado</Text>
+        ) : (
+          pedidos.map((pedido) => (
+            <View key={pedido._id} style={styles.pedidoContainer}>
+              <View style={styles.pedidoRow}>
+                
+                <Pressable
+                  style={styles.deleteButton2}
+                  onPress={() => confirmarExclusao(pedido._id)}
+                >
+                  <Ionicons name="trash-outline" size={22} color="#E53935" style={styles.deleteButton}/>
+                  <Text style={styles.infoTexto1920}>🌟</Text>
+                  <Text style={styles.pedidoText}>{pedido.descricao}</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))
+        )}
+      </ScrollView>
 
-          {/* Botão de Logout */}
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Text style={styles.logoutButtonText}>Sair da Conta</Text>
-          </TouchableOpacity>
-      </SafeAreaView>
+      <TouchableOpacity style={styles.botaoTrocarTipo} onPress={trocarTipoUsuario}>
+      <Text style={styles.textoBotaoTrocar}>🔄 Trocar tipo de usuário</Text>
+    </TouchableOpacity>
+
+
+      <TouchableOpacity style={styles.logoutButton55} onPress={handleLogout}>
+        <Text style={styles.logoutButtonText55}>Sair da Conta</Text>
+      </TouchableOpacity>
+
+      <Modal
+  animationType="slide"
+  transparent={true}
+  visible={modalVisible}
+  onRequestClose={() => setModalVisible(false)}
+>
+  <View style={{ flex: 1, justifyContent: 'center', backgroundColor: '#000000aa' }}>
+    <View style={{ margin: 20, backgroundColor: 'white', borderRadius: 10, padding: 20 }}>
+      <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 10 }}>
+        Escolha sua área de atuação
+      </Text>
+
+      <Picker
+        selectedValue={selectedArea}
+        onValueChange={(itemValue) => setSelectedArea(itemValue)}
+      >
+        <Picker.Item label="Reparos, Construções e Serviços Gerais" value="Reparos, Construções e Serviços Gerais" />
+        <Picker.Item label="Tecnologia, Educação e Consultorias" value="Tecnologia, Educação e Consultorias" />
+        <Picker.Item label="Beleza e estética" value="Beleza e estética" />
+        <Picker.Item label="Imóveis, Veículos e Locações Gerais" value="Imóveis, Veículos e Locações Gerais" />
+        <Picker.Item label="Saúde, Beleza e Bem-Estar" value="Saúde, Beleza e Bem-Estar" />
+        
+      </Picker>
+
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
+        <Button title="Cancelar" onPress={() => setModalVisible(false)} />
+        <Button title="Confirmar" onPress={confirmarTrocaTipo} />
+      </View>
+    </View>
+  </View>
+</Modal>
+
+    </SafeAreaView>
   );
 };
 
@@ -1145,23 +1398,12 @@ function Inicio() {
 
   // 🔹 Capturar nome do profissional
   const fetchNome = async () => {
-      try {
-          const token = await AsyncStorage.getItem('token');
-          if (!token) {
-              console.error('Token não encontrado.');
-              return;
-          }
-
-          const response = await api.get('/auth/me', {
-              headers: { Authorization: `Bearer ${token}` }
-          });
-
-          if (response.data && response.data.nome) {
-              setNome(response.data.nome);
-          }
-      } catch (error) {
-          console.error('Erro ao buscar nome do usuário:', error.response?.data || error.message);
-      }
+    try {
+      const storedNome = await AsyncStorage.getItem('nome');
+      if (storedNome) setNome(storedNome);
+    } catch (error) {
+      console.error('Erro ao carregar nome salvo:', error);
+    }
   };
 
   // 🔹 Capturar localização do profissional
@@ -1251,13 +1493,33 @@ function Inicio() {
     });
   };
 
+  const getSaudacao = () => {
+    const hora = new Date().getHours();
+    if (hora < 12) return 'Bom dia';
+    if (hora < 18) return 'Boa tarde';
+    return 'Boa noite';
+  };
+  const saudacao = getSaudacao();
+  
+
   return (
-      <SafeAreaView style={styles.container}>
-          <Text style={styles.footerheader}>Bem-vindo, {nome}!</Text>
+
+      <SafeAreaView>
+        <View style={styles.headerContainer}>
+  <View style={styles.headerTextContainer}>
+    <Text style={styles.saudacaoTexto}>👋 {saudacao}</Text>
+    <Text style={styles.nomeTexto}>Bem-vindo, <Text style={styles.nomeDestaque}>{nome}</Text></Text>
+  </View>
+  <Image
+    source={require('./assets/comerciante.png')} // Substitua pela sua imagem
+    style={styles.avatar}
+  />
+</View>
+
 
           {/* Campo de Busca */}
           
-          
+          <View>
 
           <FlatList
               data={pedidos}
@@ -1281,9 +1543,124 @@ function Inicio() {
               )}
               ListEmptyComponent={<Text style={styles.noPedidos}>Nenhum pedido encontrado.</Text>}
           />
+          </View>
       </SafeAreaView>
   );
 }
+
+function Oportunidades() {
+  const [pedidos, setPedidos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [location, setLocation] = useState(null);
+  
+  const obterLocalizacao = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permissão negada para acessar a localização.');
+        return;
+      }
+  
+      const loc = await Location.getCurrentPositionAsync({});
+      setLocation(loc.coords);
+    } catch (error) {
+      console.error('Erro ao obter localização:', error.message);
+    }
+  };
+  
+
+  const abrirWhatsapp = (telefone) => {
+    if (!telefone) {
+      Alert.alert("Erro", "Número de telefone não disponível.");
+      return;
+    }
+
+    const numeroFormatado = telefone.replace(/\D/g, "");
+    const url = `https://wa.me/55${numeroFormatado}`;
+
+    Linking.openURL(url).catch(() => {
+      Alert.alert("Erro", "Não foi possível abrir o WhatsApp.");
+    });
+  };
+
+  const carregarPedidosPorCategoria = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token || !location) return;
+  
+      const response = await api.get('/pedidos/listarPorCategory', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          latitude: location.latitude,
+          longitude: location.longitude
+        }
+      });
+  
+      setPedidos(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar oportunidades:', error.response?.data || error.message);
+      Alert.alert("Erro", "Não foi possível carregar as oportunidades.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    const iniciar = async () => {
+      await obterLocalizacao();
+    };
+    iniciar();
+  }, []);
+  
+  useEffect(() => {
+    if (location) {
+      carregarPedidosPorCategoria();
+    }
+  }, [location]);
+  
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#00aaff" />
+        <Text>Carregando oportunidades...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1, padding: 16 }}>
+      <View style={styles.headerContainer}>
+      <Text style={styles.nomeDestaque}>
+        🎯 Oportunidades da sua área
+      </Text>
+      </View>
+
+      <FlatList
+        data={pedidos}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => (
+          <View style={{
+            borderWidth: 1,
+            borderColor: '#ccc',
+            padding: 12,
+            borderRadius: 10,
+            marginBottom: 10,
+            backgroundColor: '#f9f9f9',
+          }}>
+            <Text style={{ fontWeight: 'bold' }}>📌 Pedido de: {item.nomeUsuario}</Text>
+            <Text style={{ marginVertical: 4 }}>{item.descricao}</Text>
+            <Text>🚗 Distância: {item.distancia}</Text>
+            <Text>⏱ Publicado {item.tempoDecorrido}</Text>
+            <Button title="Entrar em contato" onPress={() => abrirWhatsapp(item.telefone)} />
+          </View>
+        )}
+        ListEmptyComponent={<Text>Nenhum pedido disponível no momento.</Text>}
+      />
+    </SafeAreaView>
+  );
+}
+
 function Login({ navigation }) {
   const [telefone, setTelefone] = useState('');
   const [senha, setSenha] = useState('');
@@ -1542,11 +1919,14 @@ function Oportunidades() {
   );
 }
 */
+import { Modal } from "react-native";
+
+{/*
 function Publicar() {
   const [videoUri, setVideoUri] = useState(null);
-  const [loading, setLoading] = useState(false); // Estado para controle do carregamento
+  const [loading, setLoading] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false); // controle do modal
   const cameraRef = useRef(null);
-  const [capturado, setCapturado] = useState(false);
 
   const pickVideo = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -1554,10 +1934,10 @@ function Publicar() {
       allowsEditing: true,
       quality: 1,
     });
-    setCapturado(true);
 
     if (!result.canceled) {
       setVideoUri(result.assets[0].uri);
+      setPreviewVisible(true); // abrir o modal para pré-visualizar
     }
   };
 
@@ -1567,10 +1947,8 @@ function Publicar() {
       return;
     }
 
-    setLoading(true); // Ativar carregamento
-
+    setLoading(true);
     try {
-      // Obter localização
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         Alert.alert("Erro", "Permissão de localização negada!");
@@ -1581,27 +1959,24 @@ function Publicar() {
       let location = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = location.coords;
 
-      const formData = new FormData();
-      formData.append("video", {
-        uri: videoUri,
-        type: "video/mp4",
-        name: "video.mp4",
-      });
-
-      formData.append("latitude", latitude);
-      formData.append("longitude", longitude);
-
       const token = await AsyncStorage.getItem("token");
       const userId = await AsyncStorage.getItem("userId");
 
-      if (!token || !userId) {
-        Alert.alert("Erro", "Usuário não autenticado.");
-        setLoading(false);
-        return;
-      }
+  if (!token || !userId) {
+    Alert.alert("Erro", "Usuário não autenticado.");
+    setLoading(false);
+    return;
+  }
 
-      formData.append("usuario", userId);
-
+    const formData = new FormData();
+    formData.append("video", {
+      uri: videoUri,
+      type: "video/mp4",
+      name: "video.mp4",
+    });
+    formData.append("latitude", String(latitude));
+    formData.append("longitude", String(longitude));
+    formData.append("usuario", userId.trim());  // Trim para evitar espaços extras
       const response = await api.post("/videos/PostarVideo", formData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1612,23 +1987,22 @@ function Publicar() {
       if (response.status === 200) {
         Alert.alert("Sucesso", "Vídeo postado com sucesso!");
         setVideoUri(null);
+        console.log('Meus vídeos:', response.data);
+        setPreviewVisible(false); // fecha o preview depois de postar
       } else {
-        console.error("Erro da API:", response.data);
         Alert.alert("Erro", response.data?.message || "Falha ao enviar o vídeo.");
       }
     } catch (error) {
+      console.error("Erro ao postar vídeo:", error);
       console.error("Erro ao enviar vídeo:", error.response?.data || error.message);
       Alert.alert("Erro", "Erro ao enviar o vídeo.");
     } finally {
-      setLoading(false); // Desativar carregamento
+      setLoading(false);
     }
   };
 
   return (
-    <ImageBackground
-      source={require("./assets/background2.png")}
-      style={styles.background8}
-    >
+    <ImageBackground source={require("./assets/background2.png")} style={styles.background8}>
       <View style={styles.overlay8}>
         <Text style={styles.title8}>
           Grave vídeos curtos de 30 segundos mostrando seu serviço!
@@ -1637,86 +2011,183 @@ function Publicar() {
         <TouchableOpacity style={styles.button8} onPress={pickVideo} disabled={loading}>
           <Text style={styles.buttonText8}>Escolher da Galeria</Text>
         </TouchableOpacity>
+*/}
+        {/* Modal de pré-visualização estilo Instagram */}
+        {/*
+        <Modal visible={previewVisible} animationType="slide">
+          <View style={styles.modalContainer4}>
+            {videoUri && (
+              <Video
+                source={{ uri: videoUri }}
+                style={styles.previewVideo4}
+                shouldPlay
+                isLooping
+                resizeMode="cover"
+              />
+            )}
+            <View style={styles.buttonsContainer4}>
+              <TouchableOpacity style={styles.cancelButton4} onPress={() => setPreviewVisible(false)}>
+                <Text style={styles.cancelButtonText4}>Cancelar</Text>
+              </TouchableOpacity>
 
-        {videoUri && (
-          <>
-            <Video source={{ uri: videoUri }} style={{ width: 300, height: 200, marginTop: 10 }} controls />
-
-            <TouchableOpacity
-              style={styles.buttontext10}
-              onPress={uploadVideo}
-              disabled={loading} // Desativa o botão enquanto estiver carregando
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.buttonText4}>Publicar Vídeo</Text>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
+              <TouchableOpacity style={styles.publishButton4} onPress={uploadVideo} disabled={loading}>
+                {loading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.publishButtonText4}>Publicar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     </ImageBackground>
   );
 }
+  */}
 
 const PerfilProfissional = () => {
-  const navigate = useNavigation()
-  const [nome, setNome] = useState('')
+  const navigation = useNavigation();
+  const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
- 
+  // const [meusVideos, setMeusVideos] = useState([]);
+ // const [modalVisible, setModalVisible] = useState(false);
+ // const [videoSelecionado, setVideoSelecionado] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-      const fetchUserData = async () => {
-          try {
-              const storedNome = await AsyncStorage.getItem('nome');
-              const storedTelefone = await AsyncStorage.getItem('telefone');
-              const token = await AsyncStorage.getItem('token');
+    const fetchUserData = async () => {
+      try {
+        const storedNome = await AsyncStorage.getItem('nome');
+        const storedTelefone = await AsyncStorage.getItem('telefone');
+        const token = await AsyncStorage.getItem('token');
+        const userId = await AsyncStorage.getItem('userId');
 
-              if (storedNome) setNome(storedNome);
-              if (storedTelefone) setTelefone(storedTelefone);
+        if (storedNome) setNome(storedNome);
+        if (storedTelefone) setTelefone(storedTelefone);
 
-          } catch (error) {
-              console.error('Erro ao carregar dados:', error);
-          } finally {
-              console.log('Finally');
+        if (userId && token) {
+          const response = await api.get(`/videos/MeusVideos/${userId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        
+          console.log('Response completa:', response.data);
+        
+          if (response.status === 200) {
+            console.log('Listando vídeos...');
+           // setMeusVideos(response.data); // <-- AQUI É O CERTO!!!
+          } else {
+           // setMeusVideos([]);
           }
-      };
+        }
+        
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+      }
+    };
 
-      fetchUserData();
+    fetchUserData();
   }, []);
 
-
-
-
-
-  // 📌 Logout
+  const trocarTipoUsuario = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const tipoAtual = await AsyncStorage.getItem('tipoUsuario');
+  
+      let payload = {};
+  
+      if (tipoAtual === 'cliente') {
+        payload.area = 'Reparos, Construções e Serviços Gerais'; 
+      }
+  
+      const response = await api.put('/auth/trocar-tipo', payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+  
+      if (response.status === 200) {
+        const novoTipo = response.data.tipoUsuario;
+        await AsyncStorage.setItem('tipoUsuario', novoTipo);
+  
+        Alert.alert(
+          '🚀 Tipo de usuário alterado!',
+          `Agora você é um ${novoTipo} no Skill Market!`
+        );
+  
+        if (novoTipo === 'cliente') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'App' }],
+          });
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'AppTabsProfissional' }],
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao trocar tipo de usuário:', err.response?.data || err.message);
+      Alert.alert('Erro', 'Não foi possível alterar o tipo de usuário.');
+    }
+  };
+  
   const handleLogout = async () => {
-      await AsyncStorage.clear();
-      navigation.navigate('Login'); // Volta para a tela de login
+    await AsyncStorage.clear();
+    navigation.navigate('Login');
+  };
+
+  const excluirVideo = async (videoId) => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      setLoading(true);
+      const response = await api.delete(`/videos/DeletarVideo/${videoId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.status === 200) {
+        //setMeusVideos(meusVideos.filter(video => video._id !== videoId));
+        Alert.alert("Sucesso", "Vídeo excluído!");
+        setModalVisible(false);
+      }
+    } catch (error) {
+      console.error('Erro ao deletar vídeo:', error.response?.data || error.message);
+      Alert.alert("Erro", "Erro ao deletar vídeo.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-      <SafeAreaView style={styles.container}>
-          {/* Header com imagem de perfil */}
-          <View style={styles.profileHeader5}>
-              <Image source={require('./assets/comerciante.png')} style={styles.iconperfil}/>
-              <Text style={styles.userName22}>{nome}</Text>
-          </View>
-          <View style={styles.headerText10}>
-            <Text style={styles.loginHeader}>⚠️ Avisos ⚠️</Text>
-      <Text style={styles.buttonText2}>1. Alavanque seus negocios, A skill market foi projetada para aprimorar seus negócios!</Text>
-      <Text style={styles.buttonText2}>2. Estamos em constante desenvolvimento, a cada dia aprimoramos um pouco para melhor usabilidade.</Text>
-          </View>
+    <SafeAreaView style={styles.container5519}>
+  <View style={styles.profileHeader5519}>
+    <Image source={require('./assets/comerciante.png')} style={styles.iconPerfil5519} />
+    <Text style={styles.userName5519}>{nome}</Text>
+  </View>
 
+  <Text style={styles.boasVindas19}>
+    Olá {nome}, aqui você acompanha sua atuação como profissional no Skill Market.
+  </Text>
 
-          {/* Botão de Logout */}
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Text style={styles.logoutButtonText}>Sair da Conta</Text>
-          </TouchableOpacity>
-      </SafeAreaView>
-  );
-};
+  <View style={styles.infoContainer19}>
+
+      <Text style={styles.dicaTexto19}>
+    🔧 Estamos preparando novos recursos para você gerenciar seus serviços de forma ainda melhor. Fique ligado!
+    </Text>
+   {/* */}
+
+    <TouchableOpacity
+      style={styles.botaotrocar19}
+      onPress={trocarTipoUsuario}
+    >
+      <Text style={styles.botaoTextoTrocar19}>🔄 Trocar tipo de usuário</Text>
+    </TouchableOpacity> 
+  </View>
+
+  <TouchableOpacity style={styles.logoutButton5519} onPress={handleLogout}>
+    <Text style={styles.logoutButtonText5519}>Sair da Conta</Text>
+  </TouchableOpacity>
+</SafeAreaView>
+)}
 
 
 
@@ -1735,9 +2206,9 @@ function AppTabs() {
           // Escolha os ícones com base no nome da rota
           if (route.name === "Home") {
             iconName = "home";
-          } else if (route.name === "Explorar") {
-            iconName = "play-circle";
-          } 
+          }// else if (route.name === "Explorar") {
+           // iconName = "play-circle";
+         // } 
           else if (route.name === "Pedidos") {
             iconName = "assignment";
           } else if (route.name === "Perfil") {
@@ -1750,7 +2221,7 @@ function AppTabs() {
       })}
     >
       <Tab.Screen name="Home" component={Home} />
-      <Tab.Screen name="Explorar" component={Explorar} />
+     {/* <Tab.Screen name="Explorar" component={Explorar} /> */}
       <Tab.Screen name="Perfil" component={Perfil} />
     </Tab.Navigator>
   );
@@ -1779,12 +2250,16 @@ function AppTabsProfissional() {
           if (route.name === "Inicio") {
             iconName = "work";
     
-          } else if (route.name === "Perfil") {
+          }
+          else if (route.name === "Oportunidades") {
+            iconName = "star";
+          }
+           else if (route.name === "Perfil") {
             iconName = "person";
           }
-          else if (route.name === "Publicar") {
-          iconName = "live-tv";
-        }
+          // else if (route.name === "Publicar") {
+          // iconName = "live-tv";
+        // }
 
           // Retorne o ícone usando react-native-vector-icons
           return <Icon name={iconName} size={size} color={color} />;
@@ -1792,12 +2267,20 @@ function AppTabsProfissional() {
       })}
     >
       <Tab.Screen name="Inicio" component={Inicio} />
-      
-      <Tab.Screen name="Publicar" component={Publicar} />
+      <Tab.Screen name="Oportunidades" component={Oportunidades} />
+      {/* <Tab.Screen name="Publicar" component={Publicar} /> */}
       <Tab.Screen name="Perfil" component={PerfilProfissional} />
     </Tab.Navigator>
   );
 }
+
+const pingServer = () => {
+  fetch("https://backend-skillmarket.onrender.com/")
+    .then(() => console.log("Servidor pingado!"))
+    .catch((err) => console.error("Erro ao pingar:", err));
+};
+
+pingServer()
 
 export default function App() {
   useEffect(() => {
@@ -1826,7 +2309,8 @@ export default function App() {
         <Stack.Screen name="Boas-vindas" component={Boasvindas} />
         <Stack.Screen name="Profissional" component={Profissional} />
         <Stack.Screen name="Inicio" component={Inicio} />
-        <Stack.Screen name="Explorar" component={Explorar} />
+        <Stack.Screen name="PedidoPorCategoria" component={PedidoPorCategoria} />
+       {/* <Stack.Screen name="Explorar" component={Explorar} /> */}
         <Stack.Screen name="FormularioPedidos" component={FormularioPedidos} />
         <Stack.Screen name="AppTabsProfissional" component={AppTabsProfissional} />
         <Stack.Screen name="Delivery" component={Delivery} />
@@ -1849,6 +2333,333 @@ const styles = StyleSheet.create({
     flex:1,
     backgroundColor: '#f9f9f9',
     padding: 30,
+  },
+  cordoscrow:{
+    backgroundColor:'#f9f9f9'
+  },
+  botaoPedidoRapido: {
+    backgroundColor: '#4CAF50', // verde bonito
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 10,
+    elevation: 4, // sombra no Android
+    shadowColor: '#000', // sombra no iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  textoPedidoRapido: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  botaoTrocarTipo: {
+    backgroundColor: '#4CAF50',
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 20,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  textoBotaoTrocar: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+    fontFamily:'roboto'
+  },
+  
+  container5519: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 20,
+  },
+  profileHeader5519: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  iconPerfil5519: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    marginBottom: 10,
+  },
+  userName5519: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  boasVindas19: {
+    textAlign: 'center',
+    fontSize: 16,
+    marginVertical: 10,
+    color: '#444',
+  },
+  infoContainer19: {
+    marginTop: 10,
+    paddingHorizontal: 10,
+  },
+  infoTexto19: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 10,
+  },
+  infoTexto1920: {
+    fontSize: 16,
+    color: '#555',
+    marginBottom: 10,
+  },
+  
+  infoDestaque19: {
+    fontWeight: 'bold',
+    color: '#222',
+  },
+  dicaTexto19: {
+    fontSize: 14,
+    color: '#444',
+    marginTop: 15,
+  },
+  botaotrocar19: {
+    backgroundColor: '#2196F3',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  botaoTextoTrocar19: {
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 14,
+  fontFamily:'roboto'
+  },
+  logoutButton5519: {
+    marginTop: 30,
+    alignSelf: 'center',
+    backgroundColor: '#E53935',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+
+  },
+  logoutButtonText5519: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+    fontFamily:'roboto'
+  },
+   container40: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingTop: 50,
+  },
+  backButton40: {
+    position: 'absolute',
+    top: 40,
+    left: 16,
+    zIndex: 10,
+  },
+  categoryTitle40: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  searchContainer40: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f1f1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  searchInput40: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 10,
+  },
+  clearButton40: {
+    padding: 6,
+  },
+  clearText40: {
+    fontSize: 16,
+    color: '#999',
+  },
+  listContainer40: {
+    paddingBottom: 40,
+  },
+  serviceCard40: {
+    width: '48%',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+  },
+  serviceIcon40: {
+    width: '100%',
+    height: 60,
+    resizeMode: 'contain',
+    marginBottom: 8,
+  },
+  serviceLabel40: {
+    fontSize: 14,
+    fontFamily:'roboto',
+    textAlign: 'center',
+    color: '#333',
+  },
+  noResults40: {
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
+    color: '#999',
+  },
+  containerPedido2:{
+    flex: 1,
+    position: 'relative',
+  },
+  container55: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  profileHeader55: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  iconPerfil55: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 10,
+  },
+  userName55: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  headerAvisos55: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  avisoTitulo55: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  avisoTexto55: {
+    fontSize: 14,
+    marginBottom: 5,
+  },
+  listaVideos55: {
+    padding: 10,
+  },
+  videoContainer55: {
+    flex: 1,
+    margin: 5,
+    backgroundColor:'black'
+  },
+  videoItem55: {
+    width: '100%',
+    height: 200,
+  },
+  modalContainer55: {
+    flex: 1,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+  },
+  videoModal55: {
+    width: '100%',
+    height: '80%',
+
+  },
+  botaoExcluir55: {
+    backgroundColor: '#ff4040',
+    padding: 15,
+    margin: 20,
+    borderRadius: 10,
+  },
+  botaoExcluirTexto55: {
+    color: '#fff',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  botaoFechar55: {
+    backgroundColor: '#666',
+    padding: 10,
+    margin: 20,
+    borderRadius: 10,
+  },
+  botaoFecharTexto55: {
+    color: '#fff',
+    textAlign: 'center',
+  },
+  logoutButton55: {
+    backgroundColor: '#ff4040',
+    margin: 20,
+    padding: 15,
+    borderRadius: 10,
+  },
+  logoutButtonText55: {
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  modalContainer4: {
+    flex: 1,
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  previewVideo4: {
+    width: "100%",
+    height: "80%",
+  },
+  buttonsContainer4: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-around",
+    padding: 20,
+  },
+  cancelButton4: {
+    backgroundColor: "#ff4040",
+    padding: 15,
+    borderRadius: 10,
+  },
+  cancelButtonText4: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  publishButton4: {
+    backgroundColor: "#00cc66",
+    padding: 15,
+    borderRadius: 10,
+  },
+  publishButtonText4: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    backgroundColor: '#007AFF',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: 10
+  },
+  headerTextContainer: {
+    flex: 1
+  },
+  saudacaoTexto: {
+    color: '#fff',
+    fontSize: 16
   },
   container34: {
     flex: 1,
@@ -2199,9 +3010,22 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     marginLeft: 10,
-    left:270,
+    right: -297,
     width:'50',
     
+},
+deletebutton2: {
+  position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: 'red',
+    borderRadius: 24,
+    padding: 1,
+    elevation: 5, // sombra no Android
+    shadowColor: '#000', // sombra no iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
 },
   pedidoContainer5: {
     backgroundColor: '#fff', // Fundo branco para destacar os pedidos
@@ -2624,6 +3448,21 @@ saveButtonText: {
     borderRadius: 45, // Deixa a imagem circular
     marginBottom: 8, // Espaço entre a imagem e o texto
   },
+  nomeTexto: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold'
+  },
+  nomeDestaque: {
+    color: '#FFD700', // Destaque com dourado ou outra cor
+    fontFamily:'roboto'
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#eee'
+  },  
   label:{
     fontSize: 16,
     color: '#555',
@@ -3048,12 +3887,22 @@ saveButtonText: {
     marginTop: 20,
     paddingBottom: 10,
   },
+ 
   footerheader:{
     fontSize: 16,
     color: 'black',//#888
     fontWeight: 'bold',
     textAlign: 'left',
     marginTop: 40,
+    paddingBottom: 15,
+  },
+  footerheader2:{
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: 'bold',
+    textAlign: 'left',
+    marginTop: 1,
+    
     paddingBottom: 15,
   },
   footerheaderPedidos:{

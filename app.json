@@ -12,6 +12,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.skillmarket"
@@ -30,11 +31,17 @@
     "web": {
       "favicon": "./assets/Icon_/home/espectro/Downloads/Icon.png"
     },
-    "plugins": [
-      "expo-font",
-      "expo-video",
-      "expo-asset"
-    ],
+"plugins": [
+  "expo-font",
+  "expo-asset",
+  [
+    "expo-video",
+    {
+      "supportsBackgroundPlayback": true,
+      "supportsPictureInPicture": true
+    }
+  ]
+],
     "extra": {
       "eas": {
         "projectId": "447d051c-2d88-4310-8333-f95a5fbfb4b9"
